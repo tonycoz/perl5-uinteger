@@ -3,6 +3,8 @@
 #include "perl.h"
 #include "XSUB.h"
 
+#include "uinteger_ppp.h"
+
 static XOP xop_add;
 static XOP xop_subtract;
 static XOP xop_multiply;

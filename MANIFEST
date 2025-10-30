@@ -5,3 +5,4 @@ MANIFEST.SKIP
 README.md
 t/uinteger.t
 uinteger.xs
+uinteger_ppp.h
