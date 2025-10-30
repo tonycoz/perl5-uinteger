@@ -32,11 +32,14 @@ uinteger - like "use integer", but unsigned
 
 =head1 DESCRIPTION
 
-Rewrites add, subtract and multiply in C<use integer> context to
+Rewrites add, subtract and multiply in C<use uinteger> context to
 perform the operation as if the number was an unsigned integer (a Perl
 C<UV>).
 
 Negative numbers are treated as their 2's complement representation.
+
+Most bitops already treat their arguments as unsigned so this doesn't
+need to cover those.
 
 For now really only a proof of concept, this requires a very recent
 perl to build since it uses the C<PERL_RC_STACK> stack manipulation
