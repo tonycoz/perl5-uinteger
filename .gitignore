@@ -1,0 +1,7 @@
+blib
+*~
+*.o
+*.bs
+uinteger.c
+MYMETA.*
+Makefile
