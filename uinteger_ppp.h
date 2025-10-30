@@ -47,4 +47,35 @@ Perl_rpp_replace_2_1_NN(pTHX_ SV *sv)
 
 #endif
 
+#ifndef TAINT_get
+
+#define TAINT_get (cBOOL(UNLIKELY(PL_tainted)))
+
+#endif
+
+#ifndef TARGu
+/* set TARG to the UV value u. If do_taint is false,
+ * assume that PL_tainted can never be true */
+#define TARGu(u, do_taint) \
+    STMT_START {                                                        \
+        UV TARGu_uv = u;                                                \
+        if (LIKELY(                                                     \
+              ((SvFLAGS(TARG) & (SVTYPEMASK|SVf_THINKFIRST|SVf_IVisUV)) == SVt_IV) \
+            & (do_taint ? !TAINT_get : 1)                               \
+            & (TARGu_uv <= (UV)IV_MAX)))                                \
+        {                                                               \
+            /* Cheap SvIOK_only().                                      \
+             * Assert that flags which SvIOK_only() would test or       \
+             * clear can't be set, because we're SVt_IV */              \
+            assert(!(SvFLAGS(TARG) &                                    \
+                (SVf_OOK|SVf_UTF8|(SVf_OK & ~(SVf_IOK|SVp_IOK)))));     \
+            SvFLAGS(TARG) |= (SVf_IOK|SVp_IOK);                         \
+            /* SvIV_set() where sv_any points to head */                \
+            TARG->sv_u.svu_iv = TARGu_uv;                               \
+        }                                                               \
+        else                                                            \
+            sv_setuv_mg(targ, TARGu_uv);                                \
+    } STMT_END
+#endif
+
 #endif
