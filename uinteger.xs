@@ -28,6 +28,7 @@ integer_checker(pTHX_ OP *op, checker_type next, OP* (*ppfunc)(pTHX)) {
     // newBINOP skips this if we change the opcode
     if (!op->op_targ)
       op->op_targ = pad_alloc(op->op_type, SVs_PADTMP);
+    op = op_contextualize(op, G_SCALAR);
   }
   else {
     op = next(aTHX_ op);
