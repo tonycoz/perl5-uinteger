@@ -1,7 +1,7 @@
 package uinteger;
-use strict;
+use v5.16.0;
 use warnings;
-use integer (); # for the hints mask
+use integer (); # for $integer::hints_bits
 
 our $VERSION = "0.001";
 
@@ -33,14 +33,14 @@ uinteger - like "use integer", but unsigned
 
 =head1 DESCRIPTION
 
-Rewrites add, subtract and multiply in C<use uinteger> context to
-perform the operation as if the number was an unsigned integer (a Perl
-C<UV>).
+Rewrites add, subtract, multiply and unary negation in C<use uinteger>
+context to perform the operation as if the number was an unsigned
+integer (a Perl C<UV>).
 
 Negative numbers are treated as their 2's complement representation.
 
-Most bitops already treat their arguments as unsigned so this doesn't
-need to cover those.
+Most bitops already treat their arguments as unsigned outside of C<use
+integer> so this doesn't need to cover those.
 
 =head1 AUTHOR
 

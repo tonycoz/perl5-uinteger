@@ -16,5 +16,6 @@ use uinteger;
 is(2-3, ~0, "subtract to get a large number");
 is(~0 *2, ~1, "multiply (UV)(-1) by 2");
 is(~0 + ~0, -2|0, "add two large numbers");
+is(-1, ~0, "negate a number");
 
 done_testing();
