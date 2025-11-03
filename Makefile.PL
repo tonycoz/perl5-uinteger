@@ -1,6 +1,10 @@
 #!perl -w
 use strict;
 use ExtUtils::MakeMaker 6.46;
+use Config;
+
+$Config{uvsize} == 8
+  or die "Perl built with 64-bit integers required for uinteger\n";
 
 my %opts = 
   (
