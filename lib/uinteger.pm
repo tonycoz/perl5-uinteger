@@ -3,7 +3,7 @@ use v5.16.0;
 use warnings;
 use integer (); # for $integer::hints_bits
 
-our $VERSION = "0.001";
+our $VERSION = "1.000";
 
 require XSLoader;
 XSLoader::load(__PACKAGE__);
