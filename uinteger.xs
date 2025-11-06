@@ -15,6 +15,8 @@ enum uint_xop_index {
 
 static XOP xops[xi_op_count];
 
+static void (*next_rpeepp)(pTHX_ OP *o);
+
 typedef OP *(*checker_type)(pTHX_ OP *o);
 typedef OP *(*ppfunc_type)(pTHX);
 
@@ -22,6 +24,8 @@ static checker_type next_add_checker;
 static checker_type next_subtract_checker;
 static checker_type next_multiply_checker;
 static checker_type next_negate_checker;
+
+static checker_type next_sassign_checker;
 
 static bool
 in_uinteger(pTHX) {
@@ -116,6 +120,14 @@ pp_u_negate(pTHX) {
     return NORMAL;
 }
 
+static ppfunc_type ppfuncs[] =
+  {
+    pp_u_add,
+    pp_u_subtract,
+    pp_u_multiply,
+    pp_u_negate
+  };
+
 static OP *
 add_checker(pTHX_ OP *op) {
   return integer_checker(aTHX_ op, next_add_checker, pp_u_add);
@@ -147,6 +159,48 @@ xop_register(pTHX_ enum uint_xop_index xop_index, const char *name,
   Perl_custom_op_register(aTHX_ ppfunc, xop);
 }
 
+static enum uint_xop_index
+find_xop_index(ppfunc_type pp) {
+  int i;
+  for (i = 0; i < xi_op_count; ++i) {
+    if (ppfuncs[i] == pp)
+      break;
+  }
+  return (enum uint_xop_index)i;
+}
+
+/* do the targlex optimization for our ops */
+static OP *
+sassign_checker(pTHX_ OP *o) {
+  o = next_sassign_checker(aTHX_ o);
+
+  /* adapted from S_maybe_targlex() */
+  OP *const kid = cLISTOPo->op_first;
+  enum uint_xop_index i;
+  if (kid->op_type == OP_CUSTOM
+      && !(kid->op_flags & OPf_STACKED)
+      && !(kid->op_private & OPpTARGET_MY)
+      && (i = find_xop_index(kid->op_ppaddr)) != xi_op_count) {
+    OP * const kkid = OpSIBLING(kid);
+    if (kkid && kkid->op_type == OP_PADSV) {
+      if (!(kkid->op_private & OPpLVAL_INTRO)
+          || (kkid->op_private & OPpPAD_STATE)) {
+        kid->op_private |= OPpTARGET_MY;
+        kid->op_flags =
+          (kid->op_flags & ~OPf_WANT)
+          | (o->op_flags   &  OPf_WANT);
+        kid->op_targ = kkid->op_targ;
+        kkid->op_targ = 0;
+        op_sibling_splice(o, NULL, 1, NULL);
+        op_free(o);
+        return kid;
+      }
+    }
+  }
+
+  return o;
+}
+
 static void
 init_ops(pTHX) {
   xop_register(aTHX_ xi_u_add, "u_add", "add unsigned integers", OA_BINOP,
@@ -165,6 +219,7 @@ init_ops(pTHX) {
   wrap_op_checker(OP_SUBTRACT, subtract_checker, &next_subtract_checker);
   wrap_op_checker(OP_MULTIPLY, multiply_checker, &next_multiply_checker);
   wrap_op_checker(OP_NEGATE, negate_checker, &next_negate_checker);
+  wrap_op_checker(OP_SASSIGN, sassign_checker, &next_sassign_checker);
 }
 
 MODULE = uinteger PACKAGE = uinteger
