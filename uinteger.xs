@@ -59,8 +59,8 @@ pp_u_add(pTHX) {
         return NORMAL;
 
     SV *leftsv = PL_stack_sp[-1];
-    UV left    = USE_LEFT(leftsv) ? SvUV_nomg(leftsv) : 0;
-    UV right   = SvUV_nomg(PL_stack_sp[0]);
+    UV left    = USE_LEFT(leftsv) ? (UV)SvIV_nomg(leftsv) : 0;
+    UV right   = (UV)SvIV_nomg(PL_stack_sp[0]);
 
     TARGu(left + right, 1);
     rpp_replace_2_1_NN(targ);
@@ -78,8 +78,8 @@ pp_u_subtract(pTHX) {
         return NORMAL;
 
     SV *leftsv = PL_stack_sp[-1];
-    UV left    = USE_LEFT(leftsv) ? SvUV_nomg(leftsv) : 0;
-    UV right   = SvUV_nomg(PL_stack_sp[0]);
+    UV left    = USE_LEFT(leftsv) ? (UV)SvIV_nomg(leftsv) : 0;
+    UV right   = (UV)SvIV_nomg(PL_stack_sp[0]);
 
     TARGu(left - right, 1);
     rpp_replace_2_1_NN(targ);
@@ -97,8 +97,8 @@ pp_u_multiply(pTHX) {
         return NORMAL;
 
     SV *leftsv = PL_stack_sp[-1];
-    UV left    = USE_LEFT(leftsv) ? SvUV_nomg(leftsv) : 0;
-    UV right   = SvUV_nomg(PL_stack_sp[0]);
+    UV left    = USE_LEFT(leftsv) ? (UV)SvIV_nomg(leftsv) : 0;
+    UV right   = (UV)SvIV_nomg(PL_stack_sp[0]);
 
     TARGu(left * right, 1);
     rpp_replace_2_1_NN(targ);
