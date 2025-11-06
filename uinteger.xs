@@ -5,12 +5,19 @@
 #include "ppport.h"
 #include "uinteger_ppp.h"
 
-static XOP xop_add;
-static XOP xop_subtract;
-static XOP xop_multiply;
-static XOP xop_negate;
+enum uint_xop_index {
+  xi_u_add,
+  xi_u_subtract,
+  xi_u_multiply,
+  xi_u_negate,
+  xi_op_count
+};
+
+static XOP xops[xi_op_count];
 
 typedef OP *(*checker_type)(pTHX_ OP *o);
+typedef OP *(*ppfunc_type)(pTHX);
+
 static checker_type next_add_checker;
 static checker_type next_subtract_checker;
 static checker_type next_multiply_checker;
@@ -129,26 +136,30 @@ negate_checker(pTHX_ OP *op) {
   return integer_checker(aTHX_ op, next_negate_checker, pp_u_negate);
 }
 
-inline void
-xop_init(XOP *xop, const char *name, const char *desc, U32 cls) {
+static inline void
+xop_register(pTHX_ enum uint_xop_index xop_index, const char *name,
+             const char *desc, U32 cls, ppfunc_type ppfunc) {
+  XOP *const xop = xops + xop_index;
   XopENTRY_set(xop, xop_name, name);
   XopENTRY_set(xop, xop_desc, desc);
   XopENTRY_set(xop, xop_class, cls);  
+
+  Perl_custom_op_register(aTHX_ ppfunc, xop);
 }
 
 static void
 init_ops(pTHX) {
-  xop_init(&xop_add, "u_add", "add unsigned integers", OA_BINOP);
-  Perl_custom_op_register(aTHX_ pp_u_add, &xop_add);
+  xop_register(aTHX_ xi_u_add, "u_add", "add unsigned integers", OA_BINOP,
+               pp_u_add);
 
-  xop_init(&xop_subtract, "u_subtract", "subtract unsigned integers", OA_BINOP);
-  Perl_custom_op_register(aTHX_ pp_u_subtract, &xop_subtract);
+  xop_register(aTHX_ xi_u_subtract, "u_subtract", "subtract unsigned integers",
+               OA_BINOP, pp_u_subtract);
 
-  xop_init(&xop_subtract, "u_multiply", "multiply unsigned integers", OA_BINOP);
-  Perl_custom_op_register(aTHX_ pp_u_multiply, &xop_multiply);
+  xop_register(aTHX_ xi_u_multiply, "u_multiply", "multiply unsigned integers",
+               OA_BINOP, pp_u_multiply);
 
-  xop_init(&xop_negate, "u_negate", "negate unsigned integers", OA_UNOP);
-  Perl_custom_op_register(aTHX_ pp_u_negate, &xop_negate);
+  xop_register(aTHX_ xi_u_negate, "u_negate", "negate unsigned integers",
+               OA_UNOP, pp_u_negate);
   
   wrap_op_checker(OP_ADD, add_checker, &next_add_checker);
   wrap_op_checker(OP_SUBTRACT, subtract_checker, &next_subtract_checker);
