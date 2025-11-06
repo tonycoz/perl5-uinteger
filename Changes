@@ -1,3 +1,8 @@
+1.001 -
+
+ * implement the target lex optimization for the custom ops
+ * use SvIV() and cast the result instead of SvUV() for performance
+
 1.000 2025-11-05
 
 Inspired by Scott Baker, who also wrote the tests.
