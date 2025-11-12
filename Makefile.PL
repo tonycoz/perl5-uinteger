@@ -2,7 +2,7 @@
 use strict;
 use ExtUtils::MakeMaker 6.46;
 use Config;
-use 5.022;
+use 5.016;
 
 $Config{uvsize} == 8
   or die "Perl built with 64-bit integers required for uinteger\n";
@@ -54,7 +54,7 @@ $opts{META_MERGE}{prereqs} =
       requires =>
       {
         "Test::More" => "0.47",
-        perl => "5.022",
+        perl => "5.016",
       }
     },
     runtime =>

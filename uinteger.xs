@@ -13,6 +13,10 @@ enum uint_xop_index {
   xi_op_count
 };
 
+#ifdef op_sibling_splice
+#  define DO_TARGMY
+#endif
+
 static XOP xops[xi_op_count];
 
 static void (*next_rpeepp)(pTHX_ OP *o);
@@ -171,6 +175,8 @@ xop_register(pTHX_ enum uint_xop_index xop_index, const char *name,
   Perl_custom_op_register(aTHX_ ppfunc, xop);
 }
 
+#ifdef DO_TARGMY
+
 static enum uint_xop_index
 find_xop_index(ppfunc_type pp) {
   int i;
@@ -213,6 +219,8 @@ sassign_checker(pTHX_ OP *o) {
   return o;
 }
 
+#endif
+
 static void
 init_ops(pTHX) {
   xop_register(aTHX_ xi_u_add, "u_add", "add unsigned integers", OA_BINOP,
@@ -231,7 +239,10 @@ init_ops(pTHX) {
   wrap_op_checker(OP_SUBTRACT, subtract_checker, &next_subtract_checker);
   wrap_op_checker(OP_MULTIPLY, multiply_checker, &next_multiply_checker);
   wrap_op_checker(OP_NEGATE, negate_checker, &next_negate_checker);
+
+#ifdef DO_TARGMY
   wrap_op_checker(OP_SASSIGN, sassign_checker, &next_sassign_checker);
+#endif
 }
 
 MODULE = uinteger PACKAGE = uinteger
