@@ -33,6 +33,133 @@ in_uinteger(pTHX) {
   return entry && SvTRUE(*entry);
 }
 
+STATIC int
+S_fold_constants_eval(pTHX) {
+  int ret = 0;
+  dJMPENV;
+
+  JMPENV_PUSH(ret);
+
+  if (ret == 0) {
+    CALLRUNOPS(aTHX);
+  }
+
+  JMPENV_POP;
+
+  return ret;
+}
+
+static OP *
+my_fold(pTHX_ OP *o) {
+
+  if (PL_parser && PL_parser->error_count)
+    return o;
+
+  /* adapted from core fold_constants */
+  OP *curop;
+  for (curop = LINKLIST(o); curop != o; curop = LINKLIST(curop)) {
+    switch (curop->op_type) {
+    case OP_CONST:
+      if (   (curop->op_private & OPpCONST_BARE)
+             && (curop->op_private & OPpCONST_STRICT)) {
+        return o;
+      }
+    case OP_LIST:
+    case OP_SCALAR:
+    case OP_NULL:
+    case OP_PUSHMARK:
+      /* Foldable; move to next op in list */
+      break;
+    default:
+      return o;
+    }
+  }
+
+  curop = LINKLIST(o);
+  OP *old_next = o->op_next;
+  o->op_next = 0;
+  PL_op = curop;
+
+  I32 old_cxix = cxstack_ix;
+  create_eval_scope(NULL, PL_stack_sp, G_FAKINGEVAL);
+
+  /* Verify that we don't need to save it:  */
+  COP not_compiling;
+  assert(PL_curcop == &PL_compiling);
+  StructCopy(&PL_compiling, &not_compiling, COP);
+  PL_curcop = &not_compiling;
+  /* The above ensures that we run with all the correct hints of the
+     currently compiling COP, but that IN_PERL_RUNTIME is true. */
+  assert(IN_PERL_RUNTIME);
+  PL_warnhook = PERL_WARNHOOK_FATAL;
+  PL_diehook  = NULL;
+
+  /* Effective $^W=1.  */
+  if ( ! (PL_dowarn & G_WARN_ALL_MASK))
+    PL_dowarn |= G_WARN_ON;
+
+  int ret = S_fold_constants_eval(aTHX);
+
+  SV *sv = NULL;
+  switch (ret) {
+  case 0:
+    sv = *PL_stack_sp;
+    if (rpp_stack_is_rc())
+      SvREFCNT_dec(sv);
+    PL_stack_sp--;
+
+    if (o->op_targ && sv == PAD_SV(o->op_targ)) {	/* grab pad temp? */
+      pad_swipe(o->op_targ,  FALSE);
+    }
+    else if (SvTEMP(sv)) {			/* grab mortal temp? */
+      SvREFCNT_inc_simple_void(sv);
+      SvTEMP_off(sv);
+    }
+    else { assert(SvIMMORTAL(sv)); }
+    break;
+  case 3:
+    /* Something tried to die.  Abandon constant folding.  */
+    /* Pretend the error never happened.  */
+    CLEAR_ERRSV();
+    o->op_next = old_next;
+    break;
+  default:
+    /* Don't expect 1 (setjmp failed) or 2 (something called my_exit)  */
+    PL_warnhook = oldwarnhook;
+    PL_diehook  = olddiehook;
+    /* XXX note that this croak may fail as we've already blown away
+     * the stack - eg any nested evals */
+    croak("panic: fold_constants JMPENV_PUSH returned %d", ret);
+  }
+  PL_dowarn   = oldwarn;
+  PL_warnhook = oldwarnhook;
+  PL_diehook  = olddiehook;
+  PL_curcop = &PL_compiling;
+
+  /* if we croaked, depending on how we croaked the eval scope
+   * may or may not have already been popped */
+  if (cxstack_ix > old_cxix) {
+    assert(cxstack_ix == old_cxix + 1);
+    assert(CxTYPE(CX_CUR()) == CXt_EVAL);
+    delete_eval_scope();
+  }
+  if (ret)
+    return o;
+  
+  op_free(o);
+  assert(sv);
+  if (!SvIMMORTAL(sv)) {
+    SvPADTMP_on(sv);
+    /* Do not set SvREADONLY(sv) here. newSVOP will call
+     * Perl_ck_svconst, which will do it. Setting it early
+     * here prevents Perl_ck_svconst from setting SvIsCOW(sv).*/
+  }
+  OP *newop = newSVOP(OP_CONST, 0, MUTABLE_SV(sv));
+  newop->op_folded = 1;
+
+  return newop;
+}
+
 static OP *
 integer_checker(pTHX_ OP *op, checker_type next, OP* (*ppfunc)(pTHX)) {
   if (in_uinteger(aTHX)) {
@@ -41,7 +168,7 @@ integer_checker(pTHX_ OP *op, checker_type next, OP* (*ppfunc)(pTHX)) {
     // newBINOP skips this if we change the opcode
     if (!op->op_targ)
       op->op_targ = pad_alloc(op->op_type, SVs_PADTMP);
-    op = op_contextualize(op, G_SCALAR);
+    op = my_fold(aTHX_ op_contextualize(op, G_SCALAR));
   }
   else {
     op = next(aTHX_ op);

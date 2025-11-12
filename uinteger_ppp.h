@@ -104,4 +104,31 @@ Perl_rpp_replace_2_1_NN(pTHX_ SV *sv)
     } STMT_END
 #endif
 
+#ifndef create_eval_scope
+#define create_eval_scope(retop, sp, flags) \
+  Perl_create_eval_scope(aTHX_ retop, sp, flags)
+void
+Perl_create_eval_scope(pTHX_ OP *retop, SV **sp, U32 flags)
+{
+    PERL_CONTEXT *cx;
+    const U8 gimme = GIMME_V;
+
+    PERL_ARGS_ASSERT_CREATE_EVAL_SCOPE;
+        
+    cx = cx_pushblock((CXt_EVAL|CXp_EVALBLOCK), gimme,
+                    sp, PL_savestack_ix);
+    cx_pusheval(cx, retop, NULL);
+
+    PL_in_eval = EVAL_INEVAL;
+    if (flags & G_KEEPERR)
+        PL_in_eval |= EVAL_KEEPERR;
+    else
+        CLEAR_ERRSV();
+    if (flags & G_FAKINGEVAL) {
+        PL_eval_root = PL_op; /* Only needed so that goto works right. */
+    }
+}
+
+#endif
+
 #endif
