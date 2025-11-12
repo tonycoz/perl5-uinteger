@@ -3,6 +3,7 @@
  * implement the target lex optimization for the custom ops
  * use SvIV() and cast the result instead of SvUV() for performance
  * now requires perl 5.22, for op_sibling_splice()
+ * add custom xop dumping for the private flags
 
 1.000 2025-11-05
 
