@@ -148,6 +148,15 @@ negate_checker(pTHX_ OP *op) {
   return integer_checker(aTHX_ op, next_negate_checker, pp_u_negate);
 }
 
+#ifdef XOPf_xop_dump
+static void
+my_xop_dump(pTHX_ const OP *o, struct Perl_OpDumpContext *ctx) {
+  Perl_opdump_printf(aTHX_ ctx, "XOPPRIVATE = (%s0x%x)",
+                     (o->op_private & OPpTARGET_MY) ? "TARGMY," : "",
+                     (o->op_private & OPpARG4_MASK));
+}
+#endif
+
 static inline void
 xop_register(pTHX_ enum uint_xop_index xop_index, const char *name,
              const char *desc, U32 cls, ppfunc_type ppfunc) {
@@ -155,6 +164,9 @@ xop_register(pTHX_ enum uint_xop_index xop_index, const char *name,
   XopENTRY_set(xop, xop_name, name);
   XopENTRY_set(xop, xop_desc, desc);
   XopENTRY_set(xop, xop_class, cls);  
+#ifdef XOPf_xop_dump
+  XopENTRY_set(xop, xop_dump, my_xop_dump);
+#endif
 
   Perl_custom_op_register(aTHX_ ppfunc, xop);
 }
