@@ -1,4 +1,4 @@
-1.001 -
+1.001 2025-11-12
 
  * implement the target lex optimization for the custom ops, but on
    5.22 and later only
